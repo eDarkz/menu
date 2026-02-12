@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { BarChart3, TrendingUp, Users, Calendar, ThumbsUp, ThumbsDown, ArrowLeft, Filter, Award, Target, Clock, Utensils } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, Calendar, ThumbsUp, ThumbsDown, ArrowLeft, Filter, Award, Target, Clock, Utensils, Repeat, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useApiMenuData } from '../hooks/useApiMenuData';
 import { formatDateForDisplay, apiFormatToDate } from '../utils/dateUtils';
@@ -169,6 +169,16 @@ export const StatsScreen: React.FC = () => {
 
   const bestDishOverall = dishStats.length > 0 ? dishStats[0] : null;
   const worstDishOverall = dishStats.length > 0 ? dishStats[dishStats.length - 1] : null;
+
+  const mostServedDishes = [...dishStats].sort((a: any, b: any) => b.appearances - a.appearances);
+  const mostServedBestRated = [...dishStats]
+    .filter((d: any) => d.appearances >= 2)
+    .sort((a: any, b: any) => b.appearances === a.appearances ? b.satisfaction - a.satisfaction : b.appearances - a.appearances)
+    .filter((d: any) => d.satisfaction >= 60);
+  const mostServedWorstRated = [...dishStats]
+    .filter((d: any) => d.appearances >= 2)
+    .sort((a: any, b: any) => b.appearances === a.appearances ? a.satisfaction - b.satisfaction : b.appearances - a.appearances)
+    .filter((d: any) => d.satisfaction < 60);
 
   // Tendencias mensuales
   const monthlyStats = filteredStats.reduce((acc, stat) => {
@@ -851,6 +861,192 @@ export const StatsScreen: React.FC = () => {
                   considerando todas sus apariciones. Solo se incluyen platillos con al menos 5 votos para mayor precisión estadística.
                 </p>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Platillos Más Veces Servidos */}
+        {mostServedDishes.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 mb-8">
+            <h3 className="text-xl font-bold text-gray-800 mb-2 flex items-center gap-3">
+              <Repeat className="w-6 h-6 text-blue-600" />
+              Platillos Más Servidos ({getPeriodLabel(selectedPeriod)})
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">Platillos ordenados por frecuencia de aparición en el menú</p>
+
+            <div className="space-y-3 max-h-[480px] overflow-y-auto">
+              {mostServedDishes.slice(0, 15).map((dish: any, index: number) => {
+                const maxAppearances = mostServedDishes[0].appearances;
+                const barWidth = maxAppearances > 0 ? Math.round((dish.appearances / maxAppearances) * 100) : 0;
+
+                const satisfactionColor =
+                  dish.satisfaction >= 70 ? 'text-green-600' :
+                  dish.satisfaction >= 50 ? 'text-yellow-600' : 'text-red-600';
+
+                return (
+                  <div key={dish.name} className="bg-gray-50 rounded-xl p-4 border border-gray-200 hover:border-blue-300 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center font-bold text-sm text-blue-700 shrink-0">
+                        {index + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h5 className="font-bold text-gray-800 text-sm truncate">{formatMenuText(dish.name)}</h5>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                          <span><strong className="text-blue-700">{dish.appearances}</strong> veces servido</span>
+                          <span><strong>{dish.totalVotes}</strong> votos</span>
+                          <span className={satisfactionColor}><strong>{dish.satisfaction}%</strong> satisfacción</span>
+                        </div>
+                        <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="h-2 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-500"
+                            style={{ width: `${barWidth}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-green-600 flex items-center gap-1"><ThumbsUp className="w-3 h-3" />{dish.totalLikes}</span>
+                          <span className="text-red-600 flex items-center gap-1"><ThumbsDown className="w-3 h-3" />{dish.totalDislikes}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Más Servidos con Mejores Calificaciones */}
+        {mostServedBestRated.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 mb-8">
+            <h3 className="text-xl font-bold text-gray-800 mb-2 flex items-center gap-3">
+              <Award className="w-6 h-6 text-green-600" />
+              Frecuentes y Bien Calificados ({getPeriodLabel(selectedPeriod)})
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">Platillos servidos al menos 2 veces con satisfacción igual o mayor al 60%</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {mostServedBestRated.slice(0, 9).map((dish: any, index: number) => {
+                const medalColor =
+                  index === 0 ? 'from-yellow-400 to-amber-500' :
+                  index === 1 ? 'from-gray-300 to-gray-400' :
+                  index === 2 ? 'from-orange-400 to-orange-500' :
+                  'from-green-100 to-green-200';
+
+                const medalText =
+                  index < 3 ? 'text-white' : 'text-green-800';
+
+                return (
+                  <div key={dish.name} className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border border-green-200 hover:shadow-md transition-shadow">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className={`w-8 h-8 rounded-full bg-gradient-to-r ${medalColor} flex items-center justify-center font-bold text-sm ${medalText} shrink-0 shadow-sm`}>
+                        {index + 1}
+                      </div>
+                      <h5 className="font-bold text-gray-800 text-sm leading-tight">{formatMenuText(dish.name)}</h5>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Satisfacción</span>
+                        <span className="font-bold text-green-600">{dish.satisfaction}%</span>
+                      </div>
+                      <div className="w-full bg-green-100 rounded-full h-2.5">
+                        <div
+                          className="h-2.5 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 transition-all duration-500"
+                          style={{ width: `${dish.satisfaction}%` }}
+                        ></div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 pt-1">
+                        <div className="flex justify-between"><span>Servido:</span><strong>{dish.appearances}x</strong></div>
+                        <div className="flex justify-between"><span>Votos:</span><strong>{dish.totalVotes}</strong></div>
+                        <div className="flex justify-between text-green-600"><span>Likes:</span><strong>{dish.totalLikes}</strong></div>
+                        <div className="flex justify-between text-red-500"><span>Dislikes:</span><strong>{dish.totalDislikes}</strong></div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {mostServedBestRated.length === 0 && (
+              <p className="text-center text-gray-500 py-8">No hay platillos frecuentes con buena calificación en este periodo</p>
+            )}
+          </div>
+        )}
+
+        {/* Más Servidos con Peores Calificaciones */}
+        {mostServedWorstRated.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 mb-8">
+            <h3 className="text-xl font-bold text-gray-800 mb-2 flex items-center gap-3">
+              <AlertTriangle className="w-6 h-6 text-red-500" />
+              Frecuentes que Necesitan Mejora ({getPeriodLabel(selectedPeriod)})
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">Platillos servidos al menos 2 veces con satisfacción menor al 60% -- candidatos a reemplazar</p>
+
+            <div className="space-y-3">
+              {mostServedWorstRated.slice(0, 10).map((dish: any, index: number) => {
+                const severityBg =
+                  dish.satisfaction < 30 ? 'from-red-50 to-red-100 border-red-300' :
+                  dish.satisfaction < 45 ? 'from-orange-50 to-red-50 border-orange-300' :
+                  'from-yellow-50 to-orange-50 border-yellow-300';
+
+                const severityText =
+                  dish.satisfaction < 30 ? 'Crítico' :
+                  dish.satisfaction < 45 ? 'Bajo' : 'Regular';
+
+                const severityBadge =
+                  dish.satisfaction < 30 ? 'bg-red-100 text-red-700 border-red-200' :
+                  dish.satisfaction < 45 ? 'bg-orange-100 text-orange-700 border-orange-200' :
+                  'bg-yellow-100 text-yellow-700 border-yellow-200';
+
+                const barColor =
+                  dish.satisfaction < 30 ? 'from-red-400 to-red-600' :
+                  dish.satisfaction < 45 ? 'from-orange-400 to-orange-600' :
+                  'from-yellow-400 to-yellow-600';
+
+                return (
+                  <div key={dish.name} className={`bg-gradient-to-r ${severityBg} rounded-xl p-5 border-2 hover:shadow-md transition-shadow`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center font-bold text-sm text-red-700 shrink-0">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <h5 className="font-bold text-gray-800 text-sm">{formatMenuText(dish.name)}</h5>
+                          <span className="text-xs text-gray-500">Servido <strong>{dish.appearances}</strong> veces</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium border ${severityBadge}`}>
+                          {severityText}
+                        </span>
+                        <span className="text-lg font-bold text-red-600">{dish.satisfaction}%</span>
+                      </div>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+                      <div
+                        className={`h-2 rounded-full bg-gradient-to-r ${barColor} transition-all duration-500`}
+                        style={{ width: `${dish.satisfaction}%` }}
+                      ></div>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-gray-600">
+                      <div className="flex gap-4">
+                        <span className="text-green-600 flex items-center gap-1"><ThumbsUp className="w-3 h-3" />{dish.totalLikes}</span>
+                        <span className="text-red-600 flex items-center gap-1"><ThumbsDown className="w-3 h-3" />{dish.totalDislikes}</span>
+                        <span>{dish.totalVotes} votos totales</span>
+                      </div>
+                      <span className="text-gray-500">Prom: {dish.avgVotesPerAppearance} votos/vez</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-6 p-4 bg-red-50 rounded-xl border border-red-200">
+              <p className="text-sm text-red-800">
+                <strong>Recomendación:</strong> Estos platillos se sirven con frecuencia pero no tienen buena aceptación.
+                Considerar mejorar su preparación o reemplazarlos por alternativas mejor valoradas.
+              </p>
             </div>
           </div>
         )}
