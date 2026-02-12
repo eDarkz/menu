@@ -7,11 +7,13 @@ import { useApiMenuData } from '../hooks/useApiMenuData';
 import { formatDateForDisplay, apiFormatToDate } from '../utils/dateUtils';
 import { formatMenuText } from '../utils/textUtils';
 
+type TimePeriod = 'all' | 'last30' | 'last90' | 'last180' | 'last365' | `year-${number}`;
+
 export const StatsScreen: React.FC = () => {
   const { menus, loading, error } = useApiMenuData();
   const [stats, setStats] = useState<any[]>([]);
   const [filteredStats, setFilteredStats] = useState<any[]>([]);
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('last365');
   const [availableYears, setAvailableYears] = useState<number[]>([]);
 
   useEffect(() => {
@@ -40,19 +42,39 @@ export const StatsScreen: React.FC = () => {
       // Obtener años disponibles
       const years = [...new Set(menuStats.map(stat => stat.dateObj.getFullYear()))].sort((a, b) => b - a);
       setAvailableYears(years);
-      
-      // Si el año actual no está en los datos, usar el año más reciente
-      if (!years.includes(selectedYear) && years.length > 0) {
-        setSelectedYear(years[0]);
-      }
     }
   }, [menus, selectedYear]);
 
   useEffect(() => {
-    // Filtrar estadísticas por año seleccionado
-    const filtered = stats.filter(stat => stat.dateObj.getFullYear() === selectedYear);
+    // Filtrar estadísticas según el periodo seleccionado
+    const now = new Date();
+    let filtered: any[] = [];
+
+    if (selectedPeriod === 'all') {
+      filtered = stats;
+    } else if (selectedPeriod === 'last30') {
+      const cutoffDate = new Date(now);
+      cutoffDate.setDate(cutoffDate.getDate() - 30);
+      filtered = stats.filter(stat => stat.dateObj >= cutoffDate);
+    } else if (selectedPeriod === 'last90') {
+      const cutoffDate = new Date(now);
+      cutoffDate.setDate(cutoffDate.getDate() - 90);
+      filtered = stats.filter(stat => stat.dateObj >= cutoffDate);
+    } else if (selectedPeriod === 'last180') {
+      const cutoffDate = new Date(now);
+      cutoffDate.setDate(cutoffDate.getDate() - 180);
+      filtered = stats.filter(stat => stat.dateObj >= cutoffDate);
+    } else if (selectedPeriod === 'last365') {
+      const cutoffDate = new Date(now);
+      cutoffDate.setDate(cutoffDate.getDate() - 365);
+      filtered = stats.filter(stat => stat.dateObj >= cutoffDate);
+    } else if (selectedPeriod.startsWith('year-')) {
+      const year = parseInt(selectedPeriod.split('-')[1]);
+      filtered = stats.filter(stat => stat.dateObj.getFullYear() === year);
+    }
+
     setFilteredStats(filtered);
-  }, [stats, selectedYear]);
+  }, [stats, selectedPeriod]);
 
   // Calcular totales basados en datos filtrados
   const totalVotes = filteredStats.reduce((sum, stat) => sum + stat.totalVotes, 0);
@@ -161,8 +183,21 @@ export const StatsScreen: React.FC = () => {
     return acc;
   }, {} as Record<number, any>);
 
-  const handleYearChange = (year: number) => {
-    setSelectedYear(year);
+  const handlePeriodChange = (period: TimePeriod) => {
+    setSelectedPeriod(period);
+  };
+
+  // Función para obtener el texto descriptivo del periodo seleccionado
+  const getPeriodLabel = (period: TimePeriod): string => {
+    if (period === 'all') return 'Todo el tiempo';
+    if (period === 'last30') return 'Último mes';
+    if (period === 'last90') return 'Últimos 3 meses';
+    if (period === 'last180') return 'Últimos 6 meses';
+    if (period === 'last365') return 'Último año';
+    if (period.startsWith('year-')) {
+      return period.split('-')[1];
+    }
+    return '';
   };
 
   if (loading) {
@@ -206,21 +241,81 @@ export const StatsScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Filtro de Año */}
-        {availableYears.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 mb-8">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Filter className="w-5 h-5 text-blue-600" />
-                <h3 className="text-lg font-semibold text-gray-800">Filtrar por Año</h3>
-              </div>
-              <div className="flex gap-2">
+        {/* Filtro de Periodo de Tiempo */}
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <Filter className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-800">Filtrar por Periodo</h3>
+          </div>
+
+          {/* Filtros rápidos */}
+          <div className="mb-4">
+            <p className="text-sm text-gray-600 mb-2 font-medium">Periodos Rápidos</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => handlePeriodChange('last30')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                  selectedPeriod === 'last30'
+                    ? 'bg-blue-500 text-white shadow-lg'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Último mes
+              </button>
+              <button
+                onClick={() => handlePeriodChange('last90')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                  selectedPeriod === 'last90'
+                    ? 'bg-blue-500 text-white shadow-lg'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Últimos 3 meses
+              </button>
+              <button
+                onClick={() => handlePeriodChange('last180')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                  selectedPeriod === 'last180'
+                    ? 'bg-blue-500 text-white shadow-lg'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Últimos 6 meses
+              </button>
+              <button
+                onClick={() => handlePeriodChange('last365')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                  selectedPeriod === 'last365'
+                    ? 'bg-blue-500 text-white shadow-lg'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Último año
+              </button>
+              <button
+                onClick={() => handlePeriodChange('all')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                  selectedPeriod === 'all'
+                    ? 'bg-blue-500 text-white shadow-lg'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Todo el tiempo
+              </button>
+            </div>
+          </div>
+
+          {/* Filtros por año específico */}
+          {availableYears.length > 0 && (
+            <div>
+              <p className="text-sm text-gray-600 mb-2 font-medium">Por Año Específico</p>
+              <div className="flex flex-wrap gap-2">
                 {availableYears.map(year => (
                   <button
                     key={year}
-                    onClick={() => handleYearChange(year)}
+                    onClick={() => handlePeriodChange(`year-${year}` as TimePeriod)}
                     className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                      selectedYear === year
+                      selectedPeriod === `year-${year}`
                         ? 'bg-blue-500 text-white shadow-lg'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
@@ -230,14 +325,19 @@ export const StatsScreen: React.FC = () => {
                 ))}
               </div>
             </div>
-            
-            {filteredStats.length > 0 && (
-              <div className="mt-4 text-sm text-gray-600">
-                Mostrando {filteredStats.length} registro{filteredStats.length !== 1 ? 's' : ''} del año {selectedYear}
-              </div>
-            )}
-          </div>
-        )}
+          )}
+
+          {filteredStats.length > 0 && (
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-sm text-blue-800">
+                <strong>Periodo seleccionado:</strong> {getPeriodLabel(selectedPeriod)}
+              </p>
+              <p className="text-sm text-blue-700 mt-1">
+                Mostrando {filteredStats.length} registro{filteredStats.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+          )}
+        </div>
 
         {error && (
           <div className="bg-red-100 border border-red-300 rounded-xl p-4 mb-8 flex items-center gap-3">
@@ -361,7 +461,7 @@ export const StatsScreen: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 mb-8">
             <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
               <Calendar className="w-6 h-6 text-purple-600" />
-              Análisis por Días de la Semana {selectedYear}
+              Análisis por Días de la Semana ({getPeriodLabel(selectedPeriod)})
             </h3>
             
             {/* Resumen de mejor y peor día */}
@@ -405,7 +505,7 @@ export const StatsScreen: React.FC = () => {
                   <h4 className="text-2xl font-bold text-blue-800">Comportamiento Semanal de Satisfacción</h4>
                 </div>
                 <p className="text-blue-700 text-lg">
-                  Promedio de satisfacción por cada día de la semana durante {selectedYear}
+                  Promedio de satisfacción por cada día de la semana en {getPeriodLabel(selectedPeriod).toLowerCase()}
                 </p>
                 <p className="text-blue-600 text-sm mt-2">
                   Ideal para identificar patrones y planificar menús según el día
@@ -618,7 +718,7 @@ export const StatsScreen: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 mb-8">
             <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
               <Utensils className="w-6 h-6 text-orange-600" />
-              Análisis Consolidado de Platillos {selectedYear}
+              Análisis Consolidado de Platillos ({getPeriodLabel(selectedPeriod)})
             </h3>
             
             {/* Resumen de mejor y peor platillo consolidado */}
@@ -760,7 +860,7 @@ export const StatsScreen: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 mb-8">
             <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
               <Calendar className="w-6 h-6 text-blue-600" />
-              Tendencias Mensuales {selectedYear}
+              Tendencias Mensuales ({getPeriodLabel(selectedPeriod)})
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {Object.entries(monthlyStats).map(([monthIndex, data]) => {
