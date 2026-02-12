@@ -43,7 +43,7 @@ export const StatsScreen: React.FC = () => {
       const years = [...new Set(menuStats.map(stat => stat.dateObj.getFullYear()))].sort((a, b) => b - a);
       setAvailableYears(years);
     }
-  }, [menus, selectedYear]);
+  }, [menus]);
 
   useEffect(() => {
     // Filtrar estadísticas según el periodo seleccionado
