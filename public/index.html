@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistema de Encuestas de Menú de Hotel</title>
+    
+    <!-- Meta tags para SEO -->
+    <meta name="description" content="Sistema de votación para menús de hotel" />
+    <meta name="robots" content="index, follow" />
+    
+    <!-- Configuración para SPA routing -->
+    <base href="/" />
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/src/main.tsx" as="script" />
+    
+    <!-- Fallback para navegadores sin JavaScript -->
+    <noscript>
+      <style>
+        .no-js-message {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 100vh;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          font-family: system-ui, -apple-system, sans-serif;
+          text-align: center;
+          padding: 2rem;
+        }
+      </style>
+      <div class="no-js-message">
+        <div>
+          <h1>JavaScript Requerido</h1>
+          <p>Esta aplicación requiere JavaScript para funcionar correctamente.</p>
+          <p>Por favor, habilita JavaScript en tu navegador.</p>
+        </div>
+      </div>
+    </noscript>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
