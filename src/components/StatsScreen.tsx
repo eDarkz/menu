@@ -919,7 +919,7 @@ export const StatsScreen: React.FC = () => {
               <p className="text-gray-500">
                 {availableYears.length === 0 
                   ? 'No se encontraron estadísticas en el sistema'
-                  : `No se encontraron estadísticas para el año ${selectedYear}`
+                  : `No se encontraron estadísticas para ${getPeriodLabel(selectedPeriod).toLowerCase()}`
                 }
               </p>
             </div>
